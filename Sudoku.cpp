@@ -32,14 +32,12 @@ class Cell {
 	public:
 		int x, y;
 		vector<int> domain;
-		int domain_size;
 		int square;
 		Cell(int i, int j) {
 			x = i;
 			y = j;
 			for(int m=1;m<10;m++)
 				domain.push_back(m);
-			domain_size = 9;
 			square = getSquareNumber(x,y);
 		}
 	
@@ -56,70 +54,14 @@ class Cell {
 		for(vector<int>::iterator it = domain.begin();it != domain.end();++it) {
 			int val = (*it);
 			int bitVal = 1<<val;
-			//cout<<"Trying to check for "<<val<<" ...."<<(rows[x] & bitVal)<<"  "<<(columns[y] & bitVal != 0)<<"  "<<(squares[square] & bitVal != 0)<<endl;
-			if(((rows[x] & bitVal) != 0) || ((columns[y] & bitVal) != 0) || ((squares[square] & bitVal) != 0)) {
-				cout<<"Found it !! Deleting from Domain"<<endl;
-				domain.erase(it);
-				cout<<"New domain Size is "<<domain.size()<<endl;
+			if( ((int)(rows[x] & bitVal)!=0) || ((int)(columns[y] & bitVal) !=0) || ((int)(squares[square] & bitVal) !=0)) {
+				//cout<<"Found it !! Deleting from Domain"<<endl;
+				--it;
+				domain.erase(it+1);
+				//cout<<"New domain Size is "<<domain.size()<<endl;
 			}
 		}
 	}
-
-	/*void reCalculateDomain1() {
-		int i,j;
-		for(i=1;i<10;i++) {
-			if(matrix[x][i] != 0 && domain1[matrix[x][i]] != 0) {
-				domain1[matrix[x][i]] = 0;
-				domain_size--;
-			}
-		
-			if(matrix[i][y] != 0 && domain1[matrix[i][y]] != 0) {
-				domain1[matrix[i][y]] = 0;
-				domain_size--;
-			}
-		}
-		
-		switch(square) {
-			case 1:
-				i = 1;j=1;
-				break;
-			case 2:
-				i = 1;j=4;
-				break;
-			case 3:
-				i = 1;j=7;
-				break;
-			case 4:
-				i = 4;j=1;
-				break;
-			case 5:
-				i = 4;j=4;
-				break;
-			case 6:
-				i = 4;j=7;
-				break;
-			case 7:
-				i = 7;j=1;
-				break;
-			case 8:
-				i = 7;j=4;
-				break;
-			case 9:
-				i = 7;j=7;
-				break;
-			
-		}
-
-		for(int c = i;c<i+3;c++)
-			for(int b=j;b<j+3;b++) {
-				if(matrix[c][b] !=0) {
-					if(domain1[matrix[c][b]] != 0) {
-						domain1[matrix[c][b]] = 0;
-						domain_size--;
-					}
-				}
-			}
-	}*/
 
 	void print() {
 		cout<<x<<"   "<<y<<"   "<<getDomainSize();
@@ -153,6 +95,32 @@ void print_matrix() {
 	
 }
 
+void removeSingletonDomains() {
+    std::make_heap(collections.begin(),collections.end());
+	
+	vector<Cell>::iterator abc = collections.begin();
+	while((*abc).getDomainSize() == 1) {
+		matrix[abc->x][abc->y] = abc->getValue();
+		rows[abc->x] |= 1<<abc->getValue();
+		columns[abc->y] |= 1<<abc->getValue();
+		squares[abc->square] |= 1<<abc->getValue();
+	
+		cout<<"Setting value "<<abc->getValue()<<" at x = "<<abc->x<<"   y = "<<abc->y<<" in square "<<abc->square<<endl;
+
+		for(vector<Cell>::iterator it = collections.begin(); it != collections.end(); ++it) {
+			if((it != abc) && (it->x == abc->x || it->y == abc->y || it->square == abc->square)){
+				/*I will re-calculate the domain1 for only those cells for which I know the domain1 has changed; efficiency bitch. */
+				//cout<<"Recalculating for "<<it->x<<"  "<<it->y<<"  in square "<<it->square<<endl;
+				it->updateDomain();
+			}
+		}
+		collections.erase(abc); /*Deleting the Cell that we have freezed because Don't want it to waste my time. laters*/
+		cout<<"NOW WE HEAP THIS SHIT\n";
+		std::make_heap(collections.begin(),collections.end());	
+		abc = collections.begin();
+	}	
+}
+
 int main() {
 	cout<<"Hello World | We are awesome | Welcome to Suduko\n";
 	cout<<"Please enter the values for the Sudoku\n";
@@ -175,25 +143,7 @@ int main() {
 	for(vector<Cell>::iterator it = collections.begin(); it != collections.end(); ++it)
 		(*it).updateDomain();
 
-	std::make_heap(collections.begin(),collections.end());
-	
-	vector<Cell>::iterator abc = collections.begin();
-	while((*abc).getDomainSize() == 1) {
-		matrix[(*abc).x][(*abc).y] = (*abc).getValue();
-		cout<<"Setting value "<<(*abc).getValue()<<" at x = "<<(*abc).x<<"   y = "<<(*abc).y<<" in square "<<abc->square<<endl;
-
-		for(vector<Cell>::iterator it = collections.begin(); it != collections.end(); ++it) {
-			if((it != abc) && (it->x == abc->x || it->y == abc->y || it->square == abc->square)){
-				/*I will re-calculate the domain1 for only those cells for which I know the domain1 has changed; efficiency bitch. */
-				//cout<<"Recalculating for "<<it->x<<"  "<<it->y<<"  in square "<<it->square<<endl;
-				(*it).updateDomain();
-			}
-		}
-		collections.erase(abc); /*Deleting the Cell that we have freezed because Don't want it to waste my time. laters*/
-		cout<<"NOW WE HEAP THIS SHIT\n";
-		std::make_heap(collections.begin(),collections.end());	
-		abc = collections.begin();
-	}
+	removeSingletonDomains();
 
 	print_matrix();
 	for(vector<Cell>::iterator it = collections.begin(); it != collections.end(); ++it) {
