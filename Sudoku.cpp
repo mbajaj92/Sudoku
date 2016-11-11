@@ -205,103 +205,106 @@ void removeSingletonDomains() {
 
 	vector<Cell>::iterator abc = collections.begin();
 	while((*abc).getDomainSize() == 1) {
-		//freezeCell(*abc);
-		matrix[abc->x][abc->y] = abc->getValue();
-		rows[abc->x] |= 1<<abc->getValue();
-		columns[abc->y] |= 1<<abc->getValue();
-		squares[abc->square] |= 1<<abc->getValue();
+		Cell cell = *abc;
+
+		matrix[cell.x][cell.y] = cell.getValue();
+		rows[cell.x] |= 1<<cell.getValue();
+		columns[cell.y] |= 1<<cell.getValue();
+		squares[cell.square] |= 1<<cell.getValue();
 		/*reverseRows[abc->x].erase(abc);
 		reverseColumns[abc->y].erase(abc);
 		reverseSquares[abc->square].erase(*abc);*/
 
 		cout<<"Setting value "<<abc->getValue()<<" at x = "<<abc->x<<"   y = "<<abc->y<<" in square "<<abc->square<<endl;
-		/*std::swap(*abc,collections.back());
-		collections.pop_back();*/
-		collections.erase(abc);
-
-		updateRelatedDomains(*abc,false);
-		//updateRelatedDomainsNew(abc);
-		
 		/*Deleting the Cell that we have freezed because 
 		 *don't want it to waste my time. laters*/
+		std::swap(*abc,collections.back());
+		collections.pop_back();
+		/*collections.erase(abc);*/
+
+		updateRelatedDomains(cell,false);
+		//updateRelatedDomainsNew(abc);
+
 		cout<<"NOW WE HEAP THIS SHIT\n";
 		std::make_heap(collections.begin(),collections.end());
 		abc = collections.begin();
 	}
 }
 
-bool canWeFreeze(vector<Cell>::iterator it, int value) {
-	if(++it == collections.end())
+bool canWeFreeze() {
+	if(collections.empty())
 		return true;
 
-	//std::make_heap(collections.begin(),collections.end(),tempDomainComparator());
-	//it = collections.begin();
+	std::make_heap(collections.begin(),collections.end(),tempDomainComparator());
+	vector<Cell>::iterator it = collections.begin();
+	Cell current = *it;
+	
+	if(current.getTempDomainSize() == 0)
+		return false;
 
-	//if((*it).getTempDomainSize() == 0)
-	//	return false;
-
-	/*std::swap((*it),collections.back());
-	collections.pop_back();*/
+	std::swap((*it),collections.back());
+	collections.pop_back();
 	//collections.erase(it);
 
-	//vector<int> domain = (*it).getTempDomain();
-	vector<int> domain = (*it).getDomain();
+	vector<int> domain = current.getTempDomain();
 	for(vector<int>::iterator interator = domain.begin(); interator != domain.end(); ++interator) {
 		int val = *interator;
 		int bitVal = 1<<val;
-		if(((int)(rows[it->x] & bitVal) ==0) && ((int)(columns[it->y] & bitVal) ==0) && ((int)(squares[it->square] & bitVal) ==0)) {
-			matrix[it->x][it->y] = val;
-			rows[it->x] |= 1<<(*interator);
-			columns[it->y] |= 1<<(*interator);
-			squares[it->square] |= 1<<(*interator);
+		if(((int)(rows[current.x] & bitVal) ==0) && ((int)(columns[current.y] & bitVal) ==0) && ((int)(squares[current.square] & bitVal) ==0)) {
+			matrix[current.x][current.y] = val;
+			rows[current.x] |= 1<<val;
+			columns[current.y] |= 1<<val;
+			squares[current.square] |= 1<<val;
 			//cout<<"Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-			//updateRelatedDomains(*it,true);
+			updateRelatedDomains(current,true);
 
-			if(canWeFreeze(it,(*interator)))
+			if(canWeFreeze())
 				return true;
 
 			/*No we can't, so revert all the changes*/
-			rows[it->x] &= ~(1u<<(*interator));
-			columns[it->y] &= ~(1u<<(*interator));
-			squares[it->square] &= ~(1u<<(*interator));
-			matrix[it->x][it->y] = 0;
+			rows[current.x] &= ~(1u<<val);
+			columns[current.y] &= ~(1u<<val);
+			squares[current.square] &= ~(1u<<val);
+			matrix[current.x][current.y] = 0;
 			//cout<<"Re-Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-			//updateRelatedDomains(*it,true);
+			updateRelatedDomains(current,true);
 		}
 	}
-	//collections.push_back(*it);
+	collections.push_back(current);
 	return false;
 }
 
 bool searchNeedleInHayStack() {
 
-	std::make_heap(collections.begin(),collections.end());
+	std::make_heap(collections.begin(),collections.end(),tempDomainComparator());
 	vector<Cell>::iterator it = collections.begin();
-	/*std::swap((*it),collections.back());
-	collections.pop_back();*/
+	Cell cell = *it;
+	std::swap((*it),collections.back());
+	collections.pop_back();
 	//collections.erase(it);
 
-	vector<int> domain = (*it).getDomain();
+	vector<int> domain = cell.getTempDomain();
 	for(vector<int>::iterator interator = domain.begin(); interator != domain.end(); ++interator) {
 
-		matrix[it->x][it->y] = (*interator);
-		rows[it->x] |= 1<<(*interator);
-		columns[it->y] |= 1<<(*interator);
-		squares[it->square] |= 1<<(*interator);
+		matrix[cell.x][cell.y] = (*interator);
+		rows[cell.x] |= 1<<(*interator);
+		columns[cell.y] |= 1<<(*interator);
+		squares[cell.square] |= 1<<(*interator);
 		//cout<<"Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-		//updateRelatedDomains(*it,true);
+		updateRelatedDomains(cell,true);
 
-		if(canWeFreeze(it,(*interator)))
+		if(canWeFreeze())
 			return true;
 
 		/*No we can't, so revert all the changes*/
-		rows[it->x] &= ~(1u<<(*interator));
-		columns[it->y] &= ~(1u<<(*interator));
-		squares[it->square] &= ~(1u<<(*interator));
-		matrix[it->x][it->y] = 0;
+		rows[cell.x] &= ~(1u<<(*interator));
+		columns[cell.y] &= ~(1u<<(*interator));
+		squares[cell.square] &= ~(1u<<(*interator));
+		matrix[cell.x][cell.y] = 0;
 		//cout<<"Re-Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-		//updateRelatedDomains(*it,true);
+		updateRelatedDomains(cell,true);
 	}
+	collections.push_back(cell);
 	return false;
 }
 
@@ -331,7 +334,9 @@ int main() {
 		(*it).updateDomain();
 
 	removeSingletonDomains();
-	cout<<"CAN WE "<<searchNeedleInHayStack();
+
+	if(!collections.empty())
+	    cout<<"CAN WE "<<searchNeedleInHayStack();
 
 	print_matrix();
 	for(vector<Cell>::iterator it = collections.begin(); it != collections.end(); ++it) {
