@@ -159,43 +159,52 @@ void print_matrix() {
 	
 }
 
-void updateRelatedDomainsNew(Cell cell) {
+void updateRelatedDomainsNew(Cell cell, bool temp) {
 
 	vector<Cell*>::iterator it = reverseRows[cell.x].begin();
 	for(;it != reverseRows[cell.x].end();) {
-		cout<<"Row Checking for ";
-		(*it)->print();
+		/*cout<<"Row Checking for ";
+		(*it)->print();*/
 		if((*it)->equals(cell)) {
 			std::swap(*it,reverseRows[cell.x].back());
 			reverseRows[cell.x].pop_back();
 		} else {
-			(*it)->updateDomain();
+			if(temp)
+				(*it)->temporaryDomainUpdate();
+			else
+				(*it)->updateDomain();
 			++it;
 		}
 	}
 
 	it = reverseColumns[cell.y].begin();
 	for(;it != reverseColumns[cell.y].end();) {
-		cout<<"Column Checking for ";
-		(*it)->print();
+		/*cout<<"Column Checking for ";
+		(*it)->print();*/
 		if((*it)->equals(cell)) {
 			std::swap(*it,reverseColumns[cell.y].back());
 			reverseColumns[cell.y].pop_back();
 		} else {
-			(*it)->updateDomain();
+			if(temp)
+				(*it)->temporaryDomainUpdate();
+			else
+				(*it)->updateDomain();
 			++it;
 		}
 	}
 
 	it = reverseSquares[cell.square].begin();
 	for(;it != reverseSquares[cell.square].end();) {
-		cout<<"Sq Checking for ";
-		(*it)->print();
+		/*cout<<"Sq Checking for ";
+		(*it)->print();*/
 		if((*it)->equals(cell)) {
 			std::swap(*it,reverseSquares[cell.square].back());
 			reverseSquares[cell.square].pop_back();
 		} else {
-			(*it)->updateDomain();
+			if(temp)
+				(*it)->temporaryDomainUpdate();
+			else
+				(*it)->updateDomain();
 			++it;
 		}
 	}
@@ -237,7 +246,7 @@ void removeSingletonDomains() {
 		collections.pop_back();
 		/*collections.erase(abc);*/
 
-		updateRelatedDomainsNew(*cell/*,false*/);
+		updateRelatedDomainsNew(*cell,false);
 		//updateRelatedDomainsNew(abc);
 
 		cout<<"NOW WE HEAP THIS SHIT\n";
@@ -263,6 +272,8 @@ bool canWeFreeze() {
 
 	vector<int> domain = current->getTempDomain();
 	for(vector<int>::iterator interator = domain.begin(); interator != domain.end(); ++interator) {
+		/*cout<<"trying tto set value "<<*interator<<" for ";
+		current->print();*/
 		int val = *interator;
 		int bitVal = 1<<val;
 		if(((int)(rows[current->x] & bitVal) ==0) && ((int)(columns[current->y] & bitVal) ==0) && ((int)(squares[current->square] & bitVal) ==0)) {
@@ -271,7 +282,7 @@ bool canWeFreeze() {
 			columns[current->y] |= 1<<val;
 			squares[current->square] |= 1<<val;
 			//cout<<"Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-			updateRelatedDomains(*current,true);
+			updateRelatedDomainsNew(*current,true);
 
 			if(canWeFreeze())
 				return true;
@@ -282,9 +293,12 @@ bool canWeFreeze() {
 			squares[current->square] &= ~(1u<<val);
 			matrix[current->x][current->y] = 0;
 			//cout<<"Re-Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-			updateRelatedDomains(*current,true);
+			updateRelatedDomainsNew(*current,true);
 		}
 	}
+	reverseRows[current->x].push_back(current);
+	reverseColumns[current->y].push_back(current);
+	reverseSquares[current->square].push_back(current);
 	collections.push_back(current);
 	return false;
 }
@@ -300,13 +314,14 @@ bool searchNeedleInHayStack() {
 
 	vector<int> domain = cell->getTempDomain();
 	for(vector<int>::iterator interator = domain.begin(); interator != domain.end(); ++interator) {
-
+		/*cout<<"trying tto set value "<<*interator<<" for ";
+		cell->print();*/
 		matrix[cell->x][cell->y] = (*interator);
 		rows[cell->x] |= 1<<(*interator);
 		columns[cell->y] |= 1<<(*interator);
 		squares[cell->square] |= 1<<(*interator);
 		//cout<<"Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-		updateRelatedDomains(*cell,true);
+		updateRelatedDomainsNew(*cell,true);
 
 		if(canWeFreeze())
 			return true;
@@ -317,8 +332,12 @@ bool searchNeedleInHayStack() {
 		squares[cell->square] &= ~(1u<<(*interator));
 		matrix[cell->x][cell->y] = 0;
 		//cout<<"Re-Calling for "<<it->x<<"  "<<it->y<<"   "<<it->square<<endl;
-		updateRelatedDomains(*cell,true);
+		updateRelatedDomainsNew(*cell,true);
 	}
+	
+	reverseRows[cell->x].push_back(cell);
+	reverseColumns[cell->y].push_back(cell);
+	reverseSquares[cell->square].push_back(cell);
 	collections.push_back(cell);
 	return false;
 }
@@ -350,6 +369,7 @@ int main() {
 
 	removeSingletonDomains();
 
+	cout<<"Starting Search";
 	if(!collections.empty())
 	    cout<<"CAN WE "<<searchNeedleInHayStack();
 
